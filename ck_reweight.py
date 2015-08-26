@@ -22,11 +22,11 @@ nvis = len(Re)
 Ruv = np.sqrt(u**2+v**2)
 
 # sort based on phase-center distances
-Res = Re[np.argsort(Ruv)]
-Ims = Im[np.argsort(Ruv)]
-Wts = Wt[np.argsort(Ruv)]
-rho = Ruv[np.argsort(Ruv)]
-print(np.mean(rho),np.min(rho),np.max(rho))
+Ruv_sort_indices = np.argsort(Ruv)
+Res = Re[Ruv_sort_indices]
+Ims = Im[Ruv_sort_indices]
+Wts = Wt[Ruv_sort_indices]
+rho = Ruv[Ruv_sort_indices]
 
 # compute a rolling mean from the visibility data 
 window = 1000
@@ -55,34 +55,28 @@ rmean_Im[nvis-0.5*window+1:] = aa + bb*rho[nvis-0.5*window+1:]
 rm_Re = Res - rmean_Re
 rm_Im = Ims - rmean_Im
 
-# convert weights into uncertainties
-sigma = 1./np.sqrt(Wts)
-
 # loop through each visibility and calculate the RMS scatter from neighboring
 # visibilities (a purely empirical noise estimate; captures non-thermal noise)
-nclump = 100
-sigma_scat = np.zeros_like(sigma)
+nclump = 100		# number of neighboring visibilities used to get sigma
+trunc_sep = 50.		# in kilolambda
+sigma_scat = np.zeros_like(Ruv)
 tic = time.time()
 for i in np.arange(10):
     # calculate distances from this (u,v) point
     uvsep = ((u-u[i])**2 + (v-v[i])**2)
     # truncate list to minimize sorting overheads
-    uvsep = uvsep[uvsep < 50.**2]
+    uvsep = uvsep[uvsep < trunc_sep**2]
     # sort; select nclump nearest visibilities
     srt_Re = (rm_Re[np.argsort(uvsep)])[1:nclump]
     srt_Im = (rm_Im[np.argsort(uvsep)])[1:nclump]
     # calculate and store the standard deviation
     sigma_scat[i] = np.std(srt_Re)
-    print(sigma_scat[i], sigma[i])
+
+# now reverse the sort to compare the derived noise with the CASA noise
+est_sigma  = sigma_scat[np.argsort(Ruv_sorted_indices)]
+casa_sigma = 1./np.sqrt(Wt)
+    
 
 toc = time.time()
-#n, bins, patches = plt.hist(sig, 10, normed=1, facecolor='g', alpha=.8)
-#n, bins, patches = plt.hist(Re_scat, 100, normed=1, facecolor='r', alpha=.1)
-#n, bins, patches = plt.hist(Im_scat, 100, normed=1, facecolor='b', alpha=.1)
-#plt.axis([0.0, 0.01, 0.0, 1000.])
-plt.savefig('test.png')
-plt.clf()
-
-#toc = time.time()
 
 print(nvis*(toc-tic)/60./10.)
