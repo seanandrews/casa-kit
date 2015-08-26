@@ -4,6 +4,7 @@ import time
 import sys
 import matplotlib.pyplot as plt
 import pandas as pd
+from scipy import stats
 
 tic = time.time()
 
@@ -25,25 +26,54 @@ Res = Re[np.argsort(Ruv)]
 Ims = Im[np.argsort(Ruv)]
 Wts = Wt[np.argsort(Ruv)]
 rho = Ruv[np.argsort(Ruv)]
+print(np.mean(rho),np.min(rho),np.max(rho))
 
-# compute a running mean of the visibility profile
-runmean = pd.rolling_mean(Res, 1000, center=True)
+# compute a rolling mean from the visibility data 
+window = 1000
+rmean_Re = pd.rolling_mean(Res, window, center=True)
+rmean_Im = pd.rolling_mean(Ims, window, center=True)
+
+# extrapolate to edges using simple linear model
+# short spacings
+xfit  = rho[0.5*window:2.5*window]
+Refit = rmean_Re[0.5*window:2.5*window]
+Imfit = rmean_Im[0.5*window:2.5*window]
+bb, aa, rval, pval, serr = stats.linregress(xfit,Refit)
+rmean_Re[:0.5*window] = aa + bb*rho[:0.5*window]
+bb, aa, rval, pval, serr = stats.linregress(xfit,Imfit)
+rmean_Im[:0.5*window] = aa + bb*rho[:0.5*window]
+# long spacings
+xfit  = rho[nvis-2.5*window:nvis-0.5*window]
+Refit = rmean_Re[nvis-2.5*window:nvis-0.5*window]
+Imfit = rmean_Im[nvis-2.5*window:nvis-0.5*window]
+bb, aa, rval, pval, serr = stats.linregress(xfit,Refit)
+rmean_Re[nvis-0.5*window+1:] = aa + bb*rho[nvis-0.5*window+1:]
+bb, aa, rval, pval, serr = stats.linregress(xfit,Imfit)
+rmean_Im[nvis-0.5*window+1:] = aa + bb*rho[nvis-0.5*window+1:]
+
+# subtract the rolling mean models (only scatter remains)
+rm_Re = Res - rmean_Re
+rm_Im = Ims - rmean_Im
 
 # convert weights into uncertainties
-sig = 1./np.sqrt(Wts)
+sigma = 1./np.sqrt(Wts)
 
-plt.plot(rho, Res-runmean, '.r', rho, np.zeros_like(rho), '--b')
-#plt.plot(rho, runmean, 'b')
-
+# loop through each visibility and calculate the RMS scatter from neighboring
+# visibilities (a purely empirical noise estimate; captures non-thermal noise)
 nclump = 100
-Re_scat = np.zeros_like(Re)
-Im_scat = np.zeros_like(Im)
+sigma_scat = np.zeros_like(sigma)
 tic = time.time()
 for i in np.arange(10):
+    # calculate distances from this (u,v) point
     uvsep = ((u-u[i])**2 + (v-v[i])**2)
-    uvsep = uvsep[uvsep < 100.]
-    Re_scat[i] = np.std((Re[np.argsort(uvsep)])[1:nclump])
-    Im_scat[i] = np.std((Im[np.argsort(uvsep)])[1:nclump])
+    # truncate list to minimize sorting overheads
+    uvsep = uvsep[uvsep < 50.**2]
+    # sort; select nclump nearest visibilities
+    srt_Re = (rm_Re[np.argsort(uvsep)])[1:nclump]
+    srt_Im = (rm_Im[np.argsort(uvsep)])[1:nclump]
+    # calculate and store the standard deviation
+    sigma_scat[i] = np.std(srt_Re)
+    print(sigma_scat[i], sigma[i])
 
 toc = time.time()
 #n, bins, patches = plt.hist(sig, 10, normed=1, facecolor='g', alpha=.8)
@@ -55,4 +85,4 @@ plt.clf()
 
 #toc = time.time()
 
-print(nvis*(toc-tic)/3600.)
+print(nvis*(toc-tic)/60./10.)
