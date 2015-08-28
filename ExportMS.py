@@ -23,22 +23,21 @@ v = uvw[1,:]
 # identify number of channels
 nchan = np.shape(data)[1]
 
-# polarization averaging
-Re_xx = data[0,:,:].real
-Re_yy = data[1,:,:].real
-Im_xx = data[0,:,:].imag
-Im_yy = data[1,:,:].imag
-# - until CASA records spectrally-dependent weights, assign the same weight to 
-# - each channel (pain in the ass)
-wei_xx = np.zeros_like(Re_xx)
-wei_yy = np.zeros_like(Re_yy)
-for i in range(nchan):
-    wei_xx[i,:] = weight[0,:]
-    wei_yy[i,:] = weight[1,:]
-# - weighted averages
-Re = np.squeeze( (Re_xx*wei_xx + Re_yy*wei_yy) / (wei_xx + wei_yy) )
-Im = np.squeeze( (Im_xx*wei_xx + Im_yy*wei_yy) / (wei_xx + wei_yy) )
-Wt = np.squeeze( (wei_xx + wei_yy) )
+# until CASA records spectral-dependence in its weights, assign the same 
+# weight to each spectral channel
+sp_wgt = np.zeros_like(data.real)
+for i in range(nchan): sp_wgt[:,i,:] = weight
+
+print(np.shape(sp_wgt), np.shape(data), np.shape(flag))
+
+print(flag[0,:,40])
+print(sp_wgt[0,:,40])
+print(data.real[0,:,40])
+
+# (weighted) average the polarizations
+Re = np.sum(data.real*sp_wgt, axis=0) / np.sum(sp_wgt, axis=0)
+Im = np.sum(data.imag*sp_wgt, axis=0) / np.sum(sp_wgt, axis=0)
+Wt = np.sum(sp_wgt, axis=0) 
 
 # toss out the autocorrelation placeholders
 #xc = np.where(ant1 != ant2)
