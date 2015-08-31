@@ -1,27 +1,31 @@
 import numpy as np
 
 # .ms file name
-oms_name = 'testcont'
+oms_path = 'test_data'
+oms_name = 'testspec'
 
 # Use CASA table tools to get columns of UVW, DATA, WEIGHT, etc.
-tb.open('test_data/'+oms_name+'.ms')
-data    = tb.getcol("DATA")
-flag    = np.invert(tb.getcol("FLAG"))	# want flagged data == FALSE (avoid)
-uvw     = tb.getcol("UVW")
-weight  = tb.getcol("WEIGHT")
-spw     = tb.getcol("DATA_DESC_ID")
-field   = tb.getcol("FIELD_ID")
-time_st = tb.getcol("TIME")
-ant1    = tb.getcol("ANTENNA1")
-ant2    = tb.getcol("ANTENNA2")
+tb.open(oms_path+'/'+oms_name+'.ms')
+data   = tb.getcol("DATA")
+flag   = np.invert(tb.getcol("FLAG"))	# want flagged data == FALSE (avoid)
+uvw    = tb.getcol("UVW")
+weight = tb.getcol("WEIGHT")
+spw    = tb.getcol("DATA_DESC_ID")
+field  = tb.getcol("FIELD_ID")
 tb.close()
 
-# break out the u, v spatial frequencies
+# Get the frequency information
+freqs=[]
+tb.open(oms_path+'/'+oms_name+'.ms/SPECTRAL_WINDOW')
+nchan = tb.getcol("NUM_CHAN")
+for i in range(len(nchan)):
+    chanfreq = tb.getcell("CHAN_FREQ", i)
+    freqs.append(chanfreq)
+tb.close()
+
+# break out the u, v spatial frequencies (in meter units)
 u = uvw[0,:]
 v = uvw[1,:]
-
-# identify number of channels
-nchan = np.shape(data)[1]
 
 # until CASA records spectral-dependence in its weights, assign the same 
 # weight to each spectral channel
@@ -38,4 +42,4 @@ Wt = np.squeeze(np.sum(flag*sp_wgt, axis=0))
 
 # output to numpy file
 os.system('rm -rf '+oms_name+'.vis.npz')
-np.savez(oms_name+'.vis', u=u, v=v, Re=Re, Im=Im, Wt=Wt)
+np.savez(oms_name+'.vis', u=u, v=v, Re=Re, Im=Im, Wt=Wt, freqs=freqs)
