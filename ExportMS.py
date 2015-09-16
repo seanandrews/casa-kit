@@ -2,7 +2,7 @@ import numpy as np
 
 # .ms file name
 oms_path = 'test_data'
-oms_name = 'testspec'
+oms_name = 'testspw'
 
 # Use CASA table tools to get columns of UVW, DATA, WEIGHT, etc.
 tb.open(oms_path+'/'+oms_name+'.ms')
@@ -11,8 +11,33 @@ flag   = np.invert(tb.getcol("FLAG"))	# want flagged data == FALSE (avoid)
 uvw    = tb.getcol("UVW")
 weight = tb.getcol("WEIGHT")
 spw    = tb.getcol("DATA_DESC_ID")
-field  = tb.getcol("FIELD_ID")
 tb.close()
+
+# Notes: the dimensionality of "data" is POLARIZATION, CHANNEL, SAMPLE.  In
+# most cases I would envision the user dealing with data in one of two formats:
+#
+#	(1) a single SPW with >=1 channel;
+#	(2) multiple SPWs, but each with an identical number of channels
+#
+# There are other options, of course, but it probably would pay to average or
+# combine into these formats using 'split'/'mstransform' before this kind of 
+# parsing (usually for modeling purposes).  
+#
+# The first task is to find out which format we're dealing with:
+
+# Identify the number of SPWs, CHANNELs, POLARIZATIONs, and SAMPLEs
+spw_nums, spw_inds = np.unique(spw, return_inverse=T)
+nspw  = len(spw_nums)
+nchan = (np.shape(data))[1]
+npol  = (np.shape(data))[0]
+nsamp = (np.shape(data))[2]/nspw
+
+print(nspw, nchan, npol, nsamp)
+
+rdata = np.reshape(data, (npol, nchan, nspw, nsamp))
+print(np.shape(data))
+print(np.shape(rdata))
+
 
 # Get the frequency information
 freqs=[]
@@ -22,6 +47,7 @@ for i in range(len(nchan)):
     chanfreq = tb.getcell("CHAN_FREQ", i)
     freqs.append(chanfreq)
 tb.close()
+print(freqs)
 
 # break out the u, v spatial frequencies (in meter units)
 u = uvw[0,:]
