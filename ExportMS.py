@@ -42,4 +42,4 @@ Wt = np.squeeze(np.sum(flag*sp_wgt, axis=0))
 
 # output to numpy file
 os.system('rm -rf '+oms_name+'.vis.npz')
-np.savez(oms_name+'.vis', u=u, v=v, Re=Re, Im=Im, Wt=Wt, freqs=freqs)
+np.savez(oms_name+'.vis', u=u, v=v, Re=Re, Im=Im, Wt=Wt, freq=freqs)
