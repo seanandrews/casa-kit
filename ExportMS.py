@@ -14,14 +14,10 @@ spw    = tb.getcol("DATA_DESC_ID")
 tb.close()
 
 # Get the frequency information
-freqs=[]
+nchan = (np.shape(data))[1]
 tb.open(oms_path+'/'+oms_name+'.ms/SPECTRAL_WINDOW')
-nchan = tb.getcol("NUM_CHAN")
-for i in range(len(nchan)):
-    chanfreq = tb.getcell("CHAN_FREQ", i)
-    freqs.append(chanfreq)
+freq = np.squeeze(tb.getcell("CHAN_FREQ"))
 tb.close()
-print(freqs)
 
 # break out the u, v spatial frequencies (in meter units)
 u = uvw[0,:]
@@ -42,4 +38,4 @@ Wt = np.squeeze(np.sum(flag*sp_wgt, axis=0))
 
 # output to numpy file
 os.system('rm -rf '+oms_name+'.vis.npz')
-np.savez(oms_name+'.vis', u=u, v=v, Re=Re, Im=Im, Wt=Wt, freq=freqs)
+np.savez(oms_name+'.vis', u=u, v=v, Re=Re, Im=Im, Wt=Wt, freq=freq)

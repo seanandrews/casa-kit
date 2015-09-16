@@ -9,8 +9,8 @@ from scipy import stats
 tic = time.time()
 
 # load some data
-visdata = np.load('test_data/blind2_fo.340GHz.vis.npz')
-freq = 340e9
+visdata = np.load('testcont.vis.npz')
+freq = ((visdata['freq'])[0])[0]
 u = 1e-3*visdata['u']*freq/2.9979e8
 v = 1e-3*visdata['v']*freq/2.9979e8
 Re = visdata['Re']
@@ -54,6 +54,12 @@ rmean_Im[nvis-0.5*window+1:] = aa + bb*rho[nvis-0.5*window+1:]
 # subtract the rolling mean models (only scatter remains)
 rm_Re = Res - rmean_Re
 rm_Im = Ims - rmean_Im
+
+plt.plot(Ruv, Res, '.r', rho, rmean_Re, '.b')
+plt.show()
+
+
+sys.exit()
 
 # loop through each visibility and calculate the RMS scatter from neighboring
 # visibilities (a purely empirical noise estimate; captures non-thermal noise)
