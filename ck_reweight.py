@@ -6,16 +6,16 @@ import matplotlib.pyplot as plt
 import pandas as pd
 from scipy import stats
 
-tic = time.time()
-
 # load some data
-visdata = np.load('testcont.vis.npz')
-freq = ((visdata['freq'])[0])[0]
+fname = 'testcont'
+visdata = np.load(fname+'.vis.npz')
+freq = visdata['freq']
 u = 1e-3*visdata['u']*freq/2.9979e8
 v = 1e-3*visdata['v']*freq/2.9979e8
-Re = visdata['Re']
-Im = visdata['Im']
-Wt = visdata['Wt']
+Vis = visdata['Vis']
+Re = Vis.real
+Im = Vis.imag
+Wt = visdata['Wgt']
 nvis = len(Re)
 
 # compute the phase-center distances
@@ -55,19 +55,13 @@ rmean_Im[nvis-0.5*window+1:] = aa + bb*rho[nvis-0.5*window+1:]
 rm_Re = Res - rmean_Re
 rm_Im = Ims - rmean_Im
 
-plt.plot(Ruv, Res, '.r', rho, rmean_Re, '.b')
-plt.show()
-
-
-sys.exit()
-
 # loop through each visibility and calculate the RMS scatter from neighboring
 # visibilities (a purely empirical noise estimate; captures non-thermal noise)
 nclump = 100		# number of neighboring visibilities used to get sigma
 trunc_sep = 50.		# in kilolambda
 sigma_scat = np.zeros_like(Ruv)
 tic = time.time()
-for i in np.arange(10):
+for i in np.arange(len(rm_Re)):
     # calculate distances from this (u,v) point
     uvsep = ((u-u[i])**2 + (v-v[i])**2)
     # truncate list to minimize sorting overheads
@@ -79,10 +73,8 @@ for i in np.arange(10):
     sigma_scat[i] = np.std(srt_Re)
 
 # now reverse the sort to compare the derived noise with the CASA noise
-est_sigma  = sigma_scat[np.argsort(Ruv_sorted_indices)]
+est_sigma  = sigma_scat[np.argsort(Ruv_sort_indices)]
 casa_sigma = 1./np.sqrt(Wt)
-    
 
-toc = time.time()
-
-print(nvis*(toc-tic)/60./10.)
+# output the updated weights
+np.savez(fname+'.rwtd.vis', u=u, v=v, Re=Re, Im=Im, Wt=1./est_sigma**2)
