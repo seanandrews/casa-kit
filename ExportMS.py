@@ -2,7 +2,7 @@ import numpy as np
 
 # .ms file name
 oms_path = 'test_data'
-oms_name = 'testcont'
+oms_name = 'spw12_avg'
 
 # Use CASA table tools to get columns of UVW, DATA, WEIGHT, etc.
 tb.open(oms_path+'/'+oms_name+'.ms')
@@ -19,7 +19,7 @@ tb.close()
 
 # Get rid of any flagged columns 
 flagged   = np.all(flag, axis=(0, 1))
-unflagged = np.squeeze(np.where(problem_columns == False))
+unflagged = np.squeeze(np.where(flagged == False))
 data   = data[:,:,unflagged]
 weight = weight[:,unflagged]
 uvw    = uvw[:,unflagged]
@@ -37,7 +37,8 @@ Re  = np.sum(data.real*sp_wgt, axis=0) / np.sum(sp_wgt, axis=0)
 Im  = np.sum(data.imag*sp_wgt, axis=0) / np.sum(sp_wgt, axis=0)
 Vis = np.squeeze(Re + 1j*Im)
 Wgt = np.squeeze(np.sum(sp_wgt, axis=0))
+#if (len(freq) == 1): freq = freq[0]
 
 # output to numpy file
 os.system('rm -rf '+oms_name+'.vis.npz')
-np.savez(oms_name+'.vis', u=u, v=v, Vis=Vis, Wgt=Wgt, freq=np.squeeze(freq))
+np.savez(oms_name+'.vis', u=u, v=v, Vis=Vis, Wgt=Wgt, freq=freq[0])

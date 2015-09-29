@@ -7,7 +7,7 @@ import pandas as pd
 from scipy import stats
 
 # load some data
-fname = 'testcont'
+fname = 'spw12_avg'
 visdata = np.load(fname+'.vis.npz')
 freq = visdata['freq']
 u = 1e-3*visdata['u']*freq/2.9979e8
@@ -60,21 +60,37 @@ rm_Im = Ims - rmean_Im
 nclump = 100		# number of neighboring visibilities used to get sigma
 trunc_sep = 50.		# in kilolambda
 sigma_scat = np.zeros_like(Ruv)
-tic = time.time()
+ri_scat = np.zeros_like(Ruv)
 for i in np.arange(len(rm_Re)):
+    tic = time.time()
     # calculate distances from this (u,v) point
     uvsep = ((u-u[i])**2 + (v-v[i])**2)
     # truncate list to minimize sorting overheads
     uvsep = uvsep[uvsep < trunc_sep**2]
+    suvsep = np.sqrt((uvsep[np.argsort(uvsep)])[:nclump])
     # sort; select nclump nearest visibilities
-    srt_Re = (rm_Re[np.argsort(uvsep)])[1:nclump]
-    srt_Im = (rm_Im[np.argsort(uvsep)])[1:nclump]
+    srt_Re = (rm_Re[np.argsort(uvsep)])[:nclump]
+    srt_Im = (rm_Im[np.argsort(uvsep)])[:nclump]
+    #srt_Vis = np.concatenate((srt_Re, srt_Im))
+    #sRuv = np.concatenate((suvsep, suvsep))
     # calculate and store the standard deviation
+    #mu  = np.average(srt_Vis, weights=np.exp(-0.5*(sRuv/12.)**2))
+    #var = np.average((srt_Vis-mu)**2, weights=np.exp(-0.5*(sRuv/12.)**2))
     sigma_scat[i] = np.std(srt_Re)
+    ri_scat[i] = np.std(np.concatenate((srt_Re, srt_Im)))
+    #print(sigma_scat[i], np.sqrt(var), np.std(np.concatenate((srt_Re, srt_Im))))
+    #plt.hist(np.concatenate((srt_Re, srt_Im)), bins=20, color='g')
+    #plt.hist(srt_Re, color='b', alpha=0.2)
+    #plt.hist(srt_Im, color='r', alpha=0.2)
+    #plt.show()
+    #plt.plot(suvsep, srt_Re, '.k')
+    #plt.plot(suvsep, srt_Im, '.b')
+    #plt.show()
 
 # now reverse the sort to compare the derived noise with the CASA noise
 est_sigma  = sigma_scat[np.argsort(Ruv_sort_indices)]
+ri_sigma = ri_scat[np.argsort(Ruv_sort_indices)]
 casa_sigma = 1./np.sqrt(Wt)
 
 # output the updated weights
-np.savez(fname+'.rwtd.vis', u=u, v=v, Re=Re, Im=Im, Wt=1./est_sigma**2)
+np.savez(fname+'.rwtd.vis', u=u, v=v, Re=Re, Im=Im, WtR=1./est_sigma**2, WtRI=1./ri_sigma**2)
