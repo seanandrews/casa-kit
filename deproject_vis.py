@@ -8,17 +8,17 @@ def deproject_vis(data, bins=np.array([0.]), incl=0., PA=0., offx=0., offy=0.,
 
     # - convert keywords into relevant units
     inclr = np.radians(incl)
-    PAr = np.radians(PA)
+    PAr = 0.5*np.pi-np.radians(PA)
     offx *= -np.pi/(180.*3600.)
     offy *= -np.pi/(180.*3600.)
 
     # - change to a deprojected, rotated coordinate system
-    uprime = (u*np.cos(PAr) + v*np.sin(PAr)) * np.cos(inclr)
-    vprime = -u*np.sin(PAr) + v*np.cos(PAr)
+    uprime = (u*np.cos(PAr) + v*np.sin(PAr)) 
+    vprime = (-u*np.sin(PAr) + v*np.cos(PAr)) * np.cos(inclr)
     rhop = np.sqrt(uprime**2 + vprime**2)
 
     # - phase shifts to account for offsets
-    shifts = np.exp(-2.*np.pi*1.0j*(u*-offx + v*offy))
+    shifts = np.exp(-2.*np.pi*1.0j*(u*-offx + v*-offy))
     visp = vis*shifts
     realp = visp.real
     imagp = visp.imag
